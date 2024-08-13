@@ -4,13 +4,13 @@ import cv2
 import numpy as np
 import torch
 
+import settings
 from colour_detection.detect_color import detect_color
 from lpr_net.model.lpr_net import build_lprnet
 from lpr_net.rec_plate import rec_plate, CHARS
 from object_detection.detect_car_YOLO import ObjectDetection
 from track_logic import *
 
-import settings
 
 def get_frames(video_src: str) -> np.ndarray:
     """
@@ -39,7 +39,6 @@ def preprocess(image: np.ndarray, size: tuple) -> np.ndarray:
 
 
 def get_boxes(results, frame):
-
     """
     return dict with labels and cords
     :param results: inferences made by model
@@ -86,7 +85,6 @@ def get_boxes(results, frame):
 
 
 def plot_boxes(cars_list: list, frame: np.ndarray) -> np.ndarray:
-
     n = len(cars_list)
 
     for car in cars_list:
@@ -142,53 +140,51 @@ def plot_boxes(cars_list: list, frame: np.ndarray) -> np.ndarray:
 
 
 def check_roi(coords):
-
     detection_area = settings.DETECTION_AREA
 
     xc = int((coords[0] + coords[2]) / 2)
     yc = int((coords[1] + coords[3]) / 2)
     if (
-        (detection_area[0][0] < xc < detection_area[1][0]) 
-        and 
-        (detection_area[0][1] < yc < detection_area[1][1])
-        ):
+            (detection_area[0][0] < xc < detection_area[1][0])
+            and
+            (detection_area[0][1] < yc < detection_area[1][1])
+    ):
         return True
     else:
         return False
 
 
 def main(
-    video_file_path, 
-    yolo_model_path,
-    yolo_conf, 
-    yolo_iou,
-    lpr_model_path,
-    lpr_max_len,
-    lpr_dropout_rate, 
-    device
-    ):
-
+        video_file_path,
+        yolo_model_path,
+        yolo_conf,
+        yolo_iou,
+        lpr_model_path,
+        lpr_max_len,
+        lpr_dropout_rate,
+        device
+):
     cv2.startWindowThread()
     detector = ObjectDetection(
-        yolo_model_path, 
-        conf=yolo_conf, 
+        yolo_model_path,
+        conf=yolo_conf,
         iou=yolo_iou,
-        device = device
-        )
+        device=device
+    )
 
     LPRnet = build_lprnet(
-        lpr_max_len=lpr_max_len, 
-        phase=False, 
-        class_num=len(CHARS), 
+        lpr_max_len=lpr_max_len,
+        phase=False,
+        class_num=len(CHARS),
         dropout_rate=lpr_dropout_rate
     )
     LPRnet.to(torch.device(device))
     LPRnet.load_state_dict(
-        torch.load(lpr_model_path)
+        torch.load(lpr_model_path, map_location ='cpu')
     )
 
     for raw_frame in get_frames(video_file_path):
-        
+
         time_start = time.time()
 
         proc_frame = preprocess(raw_frame, (640, 480))
@@ -224,8 +220,8 @@ def main(
 
                 # check if number mutchs russian number type
                 if (
-                    not re.match("[A-Z]{1}[0-9]{3}[A-Z]{2}[0-9]{2,3}", plate_text)
-                    is None
+                        not re.match("[A-Z]{1}[0-9]{3}[A-Z]{2}[0-9]{2,3}", plate_text)
+                            is None
                 ):
 
                     car[0] = [plate_coords, plate_text + "_OK"]
@@ -242,10 +238,9 @@ def main(
         time_end = time.time()
 
         cv2.imshow("video", proc_frame)
-        
+
         # wait 5 sec if push 's'
         if cv2.waitKey(30) & 0xFF == ord("s"):
-
             time.sleep(5)
 
         if cv2.waitKey(30) & 0xFF == ord("q"):
@@ -256,10 +251,10 @@ if __name__ == "__main__":
     main(
         settings.FILE_PATH,
         settings.YOLO_MODEL_PATH,
-        settings.YOLO_CONF, 
+        settings.YOLO_CONF,
         settings.YOLO_IOU,
         settings.LPR_MODEL_PATH,
-        settings.LPR_MAX_LEN, 
-        settings.LPR_DROPOUT, 
+        settings.LPR_MAX_LEN,
+        settings.LPR_DROPOUT,
         settings.DEVICE
     )

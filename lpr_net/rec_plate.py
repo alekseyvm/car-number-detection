@@ -51,7 +51,8 @@ def rec_plate(lprnet, img) -> str:
     image -= 127.5
     image *= 0.0078125
     image = np.transpose(image, (2, 0, 1))
-    image = torch.from_numpy(image).cuda()
+    # image = torch.from_numpy(image).cuda()
+    image = torch.from_numpy(image).cpu()
     image = image.unsqueeze(0)
 
     # forward
